@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb
+spec:
+  serviceName: mongodb
+  replicas: 3
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+        - name: mongodb
+          image: mongodb/mongodb-community-server:8.0-ubi8
+          command:
+            - "mongod"
+            - "--bind_ip_all"
+            - "--replSet"
+            - "ReplicaSet"
+          volumeMounts:
+            - mountPath: /data/db
+              name: mongodb-volume
+            - mountPath: /docker-entrypoint-initdb.d
+              name: mongodb-scripts
+              readOnly: true
+          ports:
+            - containerPort: 27017
+      volumes:
+        - name: mongodb-scripts
+          configMap:
+            name: mongodb-scripts-configmap
+            items:
+              - key: init_user.js
+                path: init_user.js
+              - key: init_rs.js
+                path: init_rs.js
+  volumeClaimTemplates:
+    - metadata:
+        name: mongodb-volume
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi
